@@ -1,6 +1,15 @@
+## [Sreg](https://github.com/n0tr00t/Sreg) python3 version
+
+
 ### 暂停维护
 
 ----
+
+### Requirements
+
+```
+pip install chardet requests
+```
 
 ### Sreg V1.0
 

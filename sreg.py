@@ -7,7 +7,7 @@ import glob
 import json
 import chardet
 import requests
-import urlparse
+import urllib.parse
 import argparse
 import multiprocessing
 
@@ -28,11 +28,11 @@ def check(plugin, passport, passport_type):
         return
     app_name = plugin['information']['name']
     category = plugin["information"]["category"]
-    website = plugin["information"]["website"].encode("utf-8")
+    website = plugin["information"]["website"]
     judge_yes_keyword = plugin['status']['judge_yes_keyword'].encode("utf-8")
     judge_no_keyword = plugin['status']['judge_no_keyword'].encode("utf-8")
     headers = OrderedDict({
-        'Host': urlparse.urlparse(url).netloc,
+        'Host': urllib.parse.urlparse(url).netloc,
         'Connection': 'closed',
         'Pragma': 'no-cache',
         'Cache-Control': 'no-cache',
@@ -41,9 +41,12 @@ def check(plugin, passport, passport_type):
         'Accept': '*/*',
         'Referer': url,
     })
-    if plugin.has_key("headers"):
-        for header_key in plugin['headers'].keys():
+    if "headers" in plugin:
+        for header_key in list(plugin['headers'].keys()):
             headers[header_key] = plugin['headers'][header_key]
+
+    #import ipdb; ipdb.set_trace()
+
     if plugin['request']['method'] == "GET":
         try:
             url = url.replace('{}', passport)
@@ -51,51 +54,54 @@ def check(plugin, passport, passport_type):
             s.headers = headers
             content = s.get(url, headers={}, timeout=8).content
             encoding = chardet.detect(content)["encoding"]
-            if encoding == None or encoding == "ascii":
+            if encoding == None:
                 content = content.encode("utf-8")
             else:
                 content = content.decode(encoding).encode("utf-8")
-        except Exception, e:
-            print inRed('\n[-] %s Error: %s\n' % (app_name, str(e)))
+        except Exception as e:
+            print(inRed('\n[-] %s Error: %s\n' % (app_name, str(e))))
             return
         if judge_yes_keyword in content and judge_no_keyword not in content:
-            print u"[{0}] {1}".format(category, ('%s (%s)' % (app_name, website)))
-            icon = plugin['information']['icon'].encode("utf-8")
-            desc = plugin['information']['desc'].encode("utf-8")
-            output_add(category.encode("utf-8"), app_name.encode("utf-8"), website,
-                       passport.encode("utf-8"), passport_type, icon, desc)
+            print("[{0}] {1}".format(category, ('%s (%s)' % (app_name, website))))
+            icon = plugin['information']['icon']
+            desc = plugin['information']['desc']
+            output_add(category, app_name, website,
+                       passport, passport_type, icon, desc)
         else:
             pass
     elif plugin['request']['method'] == "POST":
         post_data = plugin['request']['post_fields']
-        if post_data.values().count("") != 1:
-            print "[*] The POST field can only leave a null value."
+        if list(post_data.values()).count("") != 1:
+            print("[*] The POST field can only leave a null value.")
             return
-        for k, v in post_data.iteritems():
+        for k, v in post_data.items():
             if v == "":
                 post_data[k] = passport
         try:
             s = requests.Session()
             s.headers = headers
+            #import ipdb; ipdb.set_trace()
             content = s.post(url, data=post_data, headers={}, timeout=8).content
             encoding = chardet.detect(content)["encoding"]
-            if encoding == None or encoding == "ascii":
+            if encoding == None:
                 content = content.encode("utf-8")
             else:
                 content = content.decode(encoding).encode("utf-8")
-        except Exception, e:
-            print inRed('\n[-] %s Error: %s\n' % (app_name, str(e)))
+
+        except Exception as e:
+            print(inRed('\n[-] %s Error: %s\n' % (app_name, str(e))))
             return
         if judge_yes_keyword in content and judge_no_keyword not in content:
-            print u"[{0}] {1}".format(category, ('%s (%s)' % (app_name, website)))
-            icon = plugin['information']['icon'].encode("utf-8")
-            desc = plugin['information']['desc'].encode("utf-8")
-            output_add(category.encode("utf-8"), app_name.encode("utf-8"), website,
-                       passport.encode("utf-8"), passport_type, icon, desc)
+            print("[{0}] {1}".format(category, ('%s (%s)' % (app_name, website))))
+            icon = plugin['information']['icon']
+            desc = plugin['information']['desc']
+
+            output_add(category, app_name, website,
+                       passport, passport_type, icon, desc)
         else:
             pass
     else:
-        print inRed(u'\n[*] {0} Error!\n'.format(plugin['request']['name']))
+        print(inRed('\n[*] {0} Error!\n'.format(plugin['request']['name'])))
         # print u"[-]{}:::Error!".format(plugin['request']['name'])
 
 
@@ -120,43 +126,45 @@ def main():
     '''
     all_argument = [parser_argument.cellphone, parser_argument.user, parser_argument.email]
     plugins = glob.glob("./plugins/*.json")
-    print inGreen(banner)
-    print '[*] App: Search Registration'
-    print '[*] Version: V1.1(20180419)'
-    print '[*] Website: www.n0tr00t.com'
+    print(inGreen(banner))
+    print('[*] App: Search Registration')
+    print('[*] Version: V1.1(20180419)')
+    print('[*] Website: www.n0tr00t.com')
     file_name = ""
     if all_argument.count(None) != 2:
-        print '\nInput "-h" view the help information.'
+        print('\nInput "-h" view the help information.')
         sys.exit(0)
     if parser_argument.cellphone:
-        print inYellow('\n[+] Phone Checking: %s\n') % parser_argument.cellphone
+        print(inYellow('\n[+] Phone Checking: %s\n') % parser_argument.cellphone)
         file_name = "cellphone_" + str(parser_argument.cellphone)
         output_init(file_name, "Phone: ", str(parser_argument.cellphone))
     if parser_argument.user:
-        print inYellow('\n[+] Username Checking: %s\n') % parser_argument.user
+        print(inYellow('\n[+] Username Checking: %s\n') % parser_argument.user)
         file_name = "user_" + str(parser_argument.user)
         output_init(file_name, "UserName: ", str(parser_argument.user))
     if parser_argument.email:
-        print inYellow('\n[+] Email Checking: %s\n') % parser_argument.email
+        print(inYellow('\n[+] Email Checking: %s\n') % parser_argument.email)
         file_name = "email_" + str(parser_argument.email)
         output_init(file_name, "E-mail: ", str(parser_argument.email))
+    
+    
     jobs = []
     for plugin in plugins:
         with open(plugin) as f:
             try:
                 content = json.load(f)
-            except Exception, e:
-                print e, plugin
+            except Exception as e:
+                print(e, plugin)
                 continue
         if parser_argument.cellphone:
             p = multiprocessing.Process(target=check,
-                                        args=(content, unicode(parser_argument.cellphone, "utf-8"), "cellphone"))
+                                        args=(content, str(parser_argument.cellphone, "utf-8"), "cellphone"))
         elif parser_argument.user:
             p = multiprocessing.Process(target=check,
-                                        args=(content, unicode(parser_argument.user, "utf-8"), "user"))
+                                        args=(content, str(parser_argument.user, "utf-8"), "user"))
         elif parser_argument.email:
             p = multiprocessing.Process(target=check,
-                                        args=(content, unicode(parser_argument.email, "utf-8"), "email"))
+                                        args=(content, parser_argument.email, "email"))
         p.start()
         jobs.append(p)
     while sum([i.is_alive() for i in jobs]) != 0:
